@@ -4,25 +4,3 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 
 Description: image linker application
-
-Resources:
-
-  ImageLinkerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: main
-      Runtime: go1.x
-      Tracing: 'Active'
-      Events:
-        HelloTrigger:
-          Type: Api
-          Properties:
-            Path: /
-            Method: get
-
-  ImageLinkerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /aws/lambda/${ImageLinkerFunction}
-      RetentionInDays: 30
-    DependsOn: ImageLinkerFunction
