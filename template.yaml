@@ -13,6 +13,24 @@ Resources:
     Properties:
       BucketName: image-linker-files
 
+  FilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: image-linker-files
+      AttributeDefinitions:
+        - AttributeName: ID
+          AttributeType: S
+        - AttributeName: hash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ID
+          KeyType: HASH
+        - AttributeName: hash
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+
   SaveFileFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -60,7 +78,11 @@ Resources:
                 Resource: !GetAtt FilesS3Bucket.Arn
               - Effect: Allow
                 Action:
-                    - 'logs:CreateLogGroup'
-                    - 'logs:CreateLogStream'
-                    - 'logs:PutLogEvents'
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !GetAtt FilesTable.Arn
