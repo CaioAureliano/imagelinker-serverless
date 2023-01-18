@@ -4,3 +4,63 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 
 Description: image linker application
+
+Resources:
+
+  FilesS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: image-linker-files
+
+  SaveFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      CodeUri: functions/save-file/
+      Tracing: Active
+      Events:
+        S3Trigger:
+          Type: S3
+          Properties:
+            Bucket: !Ref FilesS3Bucket
+            Events: s3:ObjectCreated:Put
+
+  SaveFileLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SaveFileFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt FilesS3Bucket.Arn
+
+  SaveFileLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+               - sts:AssumeRole
+      Path: / 
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutBucketNotification
+                Resource: !GetAtt FilesS3Bucket.Arn
+              - Effect: Allow
+                Action:
+                    - 'logs:CreateLogGroup'
+                    - 'logs:CreateLogStream'
+                    - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
