@@ -24,7 +24,7 @@ Resources:
       TableName: !FindInMap [ConfigsMap, Table, Name]
       AttributeDefinitions:
         - AttributeName: ID
-          AttributeType: S
+          AttributeType: B
       KeySchema:
         - AttributeName: ID
           KeyType: HASH
