@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -11,24 +11,26 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/google/uuid"
+	"github.com/thanhpk/randstr"
 )
 
 type File struct {
-	ID        string `dynamodb:"ID"`
-	S3ID      string `dynamodb:"s3_id"`
-	Hash      string `dynamodb:"hash"`
-	CreatedAt string `dynamodb:"created_at"`
+	ID        uuid.UUID       `dynamodbav:"ID"`
+	S3Object  events.S3Object `dynamodbav:"s3_object"`
+	Hash      string          `dynamodbav:"hash"`
+	CreatedAt time.Time       `dynamodbav:"created_at"`
 }
 
 func main() {
 	lambda.Start(handler)
 }
 
-func handler(ctx context.Context, event events.S3Event) {
-	eventJson, _ := json.Marshal(event)
+const (
+	tableName = "image-linker-files"
+)
 
-	println("event")
-	fmt.Printf("%s", eventJson)
+func handler(ctx context.Context, event events.S3Event) {
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -37,17 +39,16 @@ func handler(ctx context.Context, event events.S3Event) {
 	client := dynamodb.New(sess)
 
 	file := File{
-		ID:        "12345",
-		S3ID:      "test",
-		Hash:      "zzzzza",
-		CreatedAt: "now",
+		ID:        uuid.New(),
+		S3Object:  event.Records[0].S3.Object,
+		Hash:      randstr.Hex(5),
+		CreatedAt: time.Now(),
 	}
+
 	obj, err := dynamodbattribute.MarshalMap(file)
 	if err != nil {
 		fmt.Printf("error to marshal: %s", err)
 	}
-
-	tableName := "image-linker-files"
 
 	input := &dynamodb.PutItemInput{
 		Item:      obj,
