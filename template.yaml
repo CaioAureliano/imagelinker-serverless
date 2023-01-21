@@ -5,6 +5,11 @@ Transform: AWS::Serverless-2016-10-31
 
 Description: image linker application
 
+Mappings:
+  ConfigsMap:
+    Table:
+      Name: image-linker-files
+
 Resources:
 
   FilesS3Bucket:
@@ -16,17 +21,13 @@ Resources:
   FilesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: image-linker-files
+      TableName: !FindInMap [ConfigsMap, Table, Name]
       AttributeDefinitions:
         - AttributeName: ID
-          AttributeType: S
-        - AttributeName: hash
           AttributeType: S
       KeySchema:
         - AttributeName: ID
           KeyType: HASH
-        - AttributeName: hash
-          KeyType: RANGE
       ProvisionedThroughput:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
@@ -38,6 +39,23 @@ Resources:
       Runtime: go1.x
       CodeUri: functions/save-file/
       Tracing: Active
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutBucketNotification
+              Resource: !Sub "arn:aws:s3:::image-linker-files*"
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: 'arn:aws:logs:*:*:*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/image-linker-files'
       Events:
         S3Trigger:
           Type: S3
@@ -53,36 +71,3 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !GetAtt FilesS3Bucket.Arn
-
-  SaveFileLambdaIAMRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-               - sts:AssumeRole
-      Path: / 
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:PutBucketNotification
-                Resource: !GetAtt FilesS3Bucket.Arn
-              - Effect: Allow
-                Action:
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                Resource: 'arn:aws:logs:*:*:*'
-              - Effect: Allow
-                Action:
-                  - dynamodb:PutItem
-                Resource: !GetAtt FilesTable.Arn
