@@ -11,14 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/google/uuid"
-	"github.com/thanhpk/randstr"
+	"go.step.sm/crypto/randutil"
 )
 
 type File struct {
-	ID        uuid.UUID       `dynamodbav:"ID"`
-	S3Object  events.S3Object `dynamodbav:"s3_object"`
 	Hash      string          `dynamodbav:"hash"`
+	S3Object  events.S3Object `dynamodbav:"s3_object"`
 	CreatedAt time.Time       `dynamodbav:"created_at"`
 }
 
@@ -38,10 +36,10 @@ func handler(ctx context.Context, event events.S3Event) {
 
 	client := dynamodb.New(sess)
 
+	hash, _ := randutil.Alphanumeric(5)
 	file := File{
-		ID:        uuid.New(),
+		Hash:      hash,
 		S3Object:  event.Records[0].S3.Object,
-		Hash:      randstr.Hex(5),
 		CreatedAt: time.Now(),
 	}
 
