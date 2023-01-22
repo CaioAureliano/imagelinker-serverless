@@ -23,10 +23,10 @@ Resources:
     Properties:
       TableName: !FindInMap [ConfigsMap, Table, Name]
       AttributeDefinitions:
-        - AttributeName: ID
-          AttributeType: B
+        - AttributeName: hash
+          AttributeType: S
       KeySchema:
-        - AttributeName: ID
+        - AttributeName: hash
           KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: "5"
@@ -71,3 +71,35 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref 'AWS::AccountId'
       SourceArn: !GetAtt FilesS3Bucket.Arn
+
+  GetFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      CodeUri: functions/get-file/
+      Tracing: Active
+      Policies:
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::image-linker-files*"
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: 'arn:aws:logs:*:*:*'
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/image-linker-files'
+      Events:
+        ApiTrigger:
+          Type: Api
+          Properties:
+            Path: /{hash}
+            Method: get
+
